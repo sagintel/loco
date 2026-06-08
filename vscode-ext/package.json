@@ -1,0 +1,73 @@
+{
+  "name": "locoengine-vscode",
+  "displayName": "LocoEngine AI Gateway",
+  "description": "Seamless editor integration with LocoEngine AI Agent and RAG router.",
+  "version": "1.0.0",
+  "publisher": "locoengine",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages",
+    "Linters",
+    "Formatters"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "loco-sidebar-container",
+          "title": "LocoEngine",
+          "icon": "$(robot)"
+        }
+      ]
+    },
+    "views": {
+      "loco-sidebar-container": [
+        {
+          "type": "webview",
+          "id": "loco-sidebar-view",
+          "name": "LocoEngine Agent",
+          "visibility": "visible"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "locoengine.focusSidebar",
+        "title": "LocoEngine: Focus Chat Sidebar"
+      },
+      {
+        "command": "locoengine.addSelectionToChat",
+        "title": "LocoEngine: Add Selection to Chat"
+      }
+    ],
+    "configuration": {
+      "title": "LocoEngine Config",
+      "properties": {
+        "locoengine.serverUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8000",
+          "description": "Base URL of the running LocoEngine API server."
+        },
+        "locoengine.enableWorkspaceSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically update the LocoEngine active workspace to match VSCode's open folder."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "esbuild": "^0.20.1",
+    "typescript": "^5.3.3"
+  }
+}

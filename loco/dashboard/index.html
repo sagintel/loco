@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocoEngine Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/dashboard/style.css">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i class="fa-solid fa-microchip logo-icon"></i>
+                <div class="logo-text">
+                    <h1>LocoEngine</h1>
+                    <span>Local AI Gateway & RAG Router</span>
+                </div>
+            </div>
+            
+            <div class="header-status">
+                <div id="ollama-status" class="status-pill offline">
+                    <span class="pulse-dot"></span>
+                    <span class="status-text">Server Offline</span>
+                </div>
+                <div class="system-stats">
+                    <div class="stat-ring">
+                        <span class="stat-label">CPU</span>
+                        <div class="stat-progress-bar">
+                            <div id="cpu-bar" class="stat-fill" style="width: 0%;"></div>
+                        </div>
+                        <span id="cpu-text" class="stat-val">0%</span>
+                    </div>
+                    <div class="stat-ring">
+                        <span class="stat-label">RAM</span>
+                        <div class="stat-progress-bar">
+                            <div id="ram-bar" class="stat-fill" style="width: 0%;"></div>
+                        </div>
+                        <span id="ram-text" class="stat-val">0% (0/8 GB)</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Workspace Grid -->
+        <main class="dashboard-grid">
+            
+            <!-- Left Panel: Configurations & Downloads -->
+            <section class="grid-panel left-panel">
+                
+                <!-- Settings Panel -->
+                <div class="dashboard-card card-glow">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-sliders"></i> Gateway Control</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="config-form" class="settings-form">
+                            <div class="form-group">
+                                <label for="gateway-mode"><i class="fa-solid fa-traffic-light"></i> Operational Mode</label>
+                                <select id="gateway-mode" class="glow-input">
+                                    <option value="code">Code Mode (Direct Response)</option>
+                                    <option value="plan">Plan Mode (Needs Plan Approval)</option>
+                                    <option value="agent">Agent Mode (Tool ReAct & HITL)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="runner-type"><i class="fa-solid fa-server"></i> Inference Engine</label>
+                                <select id="runner-type" class="glow-input">
+                                    <option value="ollama">Ollama Server (Local API)</option>
+                                    <option value="native">Native llama.cpp Server (Zero-Dependency)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-row">
+                                <label class="switch-container">
+                                    <span class="switch-label">Cascade Mode (Reasoning + Coder)</span>
+                                    <input type="checkbox" id="enable-cascade">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div class="form-row">
+                                <label class="switch-container">
+                                    <span class="switch-label">Enable Agentic RAG</span>
+                                    <input type="checkbox" id="enable-rag">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="reasoning-model"><i class="fa-solid fa-brain"></i> Reasoning Model (CoT)</label>
+                                <select id="reasoning-model" class="glow-input">
+                                    <option value="deepseek-r1:1.5b">deepseek-r1:1.5b (Fast)</option>
+                                    <option value="deepseek-r1:8b">deepseek-r1:8b (Heavy)</option>
+                                    <option value="phi4:mini">phi4:mini (Capable)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="coding-model"><i class="fa-solid fa-code"></i> Coding Model (Execution)</label>
+                                <select id="coding-model" class="glow-input">
+                                    <option value="qwen2.5-coder:1.5b">qwen2.5-coder:1.5b (Fast)</option>
+                                    <option value="qwen2.5-coder:7b">qwen2.5-coder:7b (High Bench)</option>
+                                    <option value="llama3.2:3b">llama3.2:3b (Generalist)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" id="ollama-url-container">
+                                <label for="ollama-url"><i class="fa-solid fa-link"></i> Ollama Endpoint</label>
+                                <input type="text" id="ollama-url" class="glow-input" value="http://localhost:11434">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block">Save Configuration</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Native Runner Manager (Shown when native engine is selected) -->
+                <div id="native-runner-card" class="dashboard-card hidden">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-laptop-code"></i> Native llama.cpp Manager</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="native-status-section">
+                            <p class="card-subtitle">Local llama.cpp binary installation status:</p>
+                            <div class="runner-binary-status mb-12">
+                                <span id="native-install-status" class="badge badge-danger">Not Installed</span>
+                                <button id="btn-install-native" class="btn btn-tiny btn-secondary"><i class="fa-solid fa-gears"></i> Install Binaries</button>
+                            </div>
+                        </div>
+
+                        <div class="native-download-section">
+                            <p class="card-subtitle">Download GGUF model from Hugging Face:</p>
+                            <div class="download-input-group">
+                                <select id="native-download-model-select" class="glow-input">
+                                    <option value="qwen2.5-coder:1.5b">Qwen2.5-Coder 1.5B GGUF (~900MB)</option>
+                                    <option value="deepseek-r1:1.5b">DeepSeek-R1 Distill Qwen 1.5B (~900MB)</option>
+                                    <option value="llama3.2:3b">Llama 3.2 3B Instruct (~2GB)</option>
+                                </select>
+                                <button id="btn-download-native-model" class="btn btn-secondary"><i class="fa-solid fa-cloud-arrow-down"></i> Download</button>
+                            </div>
+                        </div>
+
+                        <div class="native-execution-section mt-12">
+                            <p class="card-subtitle">Start Native Server Subprocess:</p>
+                            <div class="start-input-group">
+                                <select id="native-local-models" class="glow-input">
+                                    <option value="">No local GGUFs found</option>
+                                </select>
+                                <div class="start-btn-row">
+                                    <button id="btn-start-native-server" class="btn btn-success"><i class="fa-solid fa-play"></i> Start</button>
+                                    <button id="btn-stop-native-server" class="btn btn-danger"><i class="fa-solid fa-stop"></i> Stop</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="native-progress-container" class="pull-progress-box hidden">
+                            <div class="progress-info">
+                                <span id="native-status-text">Installing...</span>
+                                <span id="native-percent-text">0%</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div id="native-progress-bar" class="progress-fill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ollama Puller Model Manager (Shown when Ollama is selected) -->
+                <div id="ollama-runner-card" class="dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-download"></i> Ollama Model Downloader</h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-subtitle">Download models directly from Ollama registry</p>
+                        <div class="download-input-group">
+                            <input type="text" id="pull-model-name" class="glow-input" placeholder="e.g., deepseek-r1:1.5b">
+                            <button id="btn-pull-model" class="btn btn-secondary"><i class="fa-solid fa-cloud-arrow-down"></i> Pull</button>
+                        </div>
+                        <div id="pull-progress-container" class="pull-progress-box hidden">
+                            <div class="progress-info">
+                                <span id="pull-status-text">Downloading...</span>
+                                <span id="pull-percent-text">0%</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div id="pull-progress-bar" class="progress-fill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Available Skills Panel -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-gem"></i> Developer Skills</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="skills-list" class="skills-list-container">
+                            <div class="skeleton-text">Loading developer skills...</div>
+                        </div>
+                        
+                        <!-- Toggle Skill Form button -->
+                        <button id="btn-toggle-skill-form" class="btn btn-secondary btn-block btn-tiny mt-12"><i class="fa-solid fa-circle-plus"></i> Create Custom Skill</button>
+                        
+                        <!-- Skill Creation Form -->
+                        <form id="skill-create-form" class="skill-form hidden mt-12">
+                            <div class="form-group">
+                                <input type="text" id="new-skill-id" class="glow-input" placeholder="skill_id (e.g. sql_writer)" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="text" id="new-skill-title" class="glow-input" placeholder="Skill Title" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="text" id="new-skill-desc" class="glow-input" placeholder="Short description" required>
+                            </div>
+                            <div class="form-group">
+                                <textarea id="new-skill-instructions" class="glow-input" placeholder="Guidelines & Prompt instructions when skill is active..." rows="3" required></textarea>
+                            </div>
+                            <div class="start-btn-row">
+                                <button type="submit" class="btn btn-success btn-tiny">Save Skill</button>
+                                <button type="button" id="btn-cancel-skill" class="btn btn-danger btn-tiny">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </section>
+            
+            <!-- Right Panel: Playground & RAG Indexing -->
+            <section class="grid-panel right-panel">
+                
+                <!-- Chat / Playground -->
+                <div class="dashboard-card chat-card">
+                    <div class="card-header chat-header">
+                        <h2><i class="fa-solid fa-terminal"></i> AI Agent Playground</h2>
+                        <div class="header-actions">
+                            <span id="speed-indicator" class="chat-speed-indicator">Speed: 0 t/s</span>
+                            <button id="btn-clear-chat" class="btn btn-tiny"><i class="fa-solid fa-trash-can"></i> Clear</button>
+                        </div>
+                    </div>
+                    <div class="chat-container">
+                        <div id="chat-messages" class="chat-messages-area">
+                            <div class="chat-welcome">
+                                <div class="welcome-icon"><i class="fa-solid fa-robot"></i></div>
+                                <h3>Welcome to LocoEngine Playground</h3>
+                                <p>Select **Code**, **Plan**, or **Agentic** mode to test completions. Inspect Cascade reasoning, manage custom approvals, and query local files instantly.</p>
+                            </div>
+                        </div>
+                        
+                        <div id="active-rag-indicator" class="rag-context-indicator hidden">
+                            <i class="fa-solid fa-database"></i> Source Context active
+                        </div>
+                        
+                        <div class="chat-input-area">
+                            <textarea id="chat-input" placeholder="Ask a question or request a code snippet..." rows="2"></textarea>
+                            <button id="btn-send-chat" class="btn btn-send"><i class="fa-solid fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RAG Index Panel -->
+                <div class="dashboard-card">
+                    <div class="card-header RAG-header">
+                        <h2><i class="fa-solid fa-database"></i> Agentic RAG Vector Index</h2>
+                        <div class="header-actions">
+                            <button id="btn-index-now" class="btn btn-tiny btn-success"><i class="fa-solid fa-arrows-rotate"></i> Scan & Index</button>
+                            <button id="btn-clear-index" class="btn btn-tiny btn-danger"><i class="fa-solid fa-circle-xmark"></i> Clear</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="rag-stats-container">
+                            <div class="stat-box">
+                                <span class="box-label">Files Scanned</span>
+                                <span id="rag-stat-files" class="box-value">0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="box-label">Vector Chunks</span>
+                                <span id="rag-stat-chunks" class="box-value">0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="box-label">Index Size</span>
+                                <span id="rag-stat-size" class="box-value">0 MB</span>
+                            </div>
+                        </div>
+                        
+                        <div class="rag-search-section">
+                            <div class="search-input-group">
+                                <input type="text" id="rag-search-query" class="glow-input" placeholder="Search codebase vector database similarity...">
+                                <button id="btn-rag-search" class="btn btn-secondary"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+                            </div>
+                            <div id="rag-search-results" class="rag-results-box hidden">
+                                <!-- Search results go here -->
+                            </div>
+                        </div>
+                        
+                        <div class="rag-indexing-log">
+                            <div class="log-header">Server Console Logs</div>
+                            <pre id="console-logs" class="logs-console">LocoEngine Server listening. Watching workspace modifications...</pre>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+        
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>LocoEngine v1.0.0 • Connected Workspace: <code id="footer-workspace">None</code></p>
+        </footer>
+    </div>
+    <script src="/dashboard/app.js"></script>
+</body>
+</html>

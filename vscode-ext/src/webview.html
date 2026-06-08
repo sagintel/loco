@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{WEBVIEW_CSS_URI}} https://fonts.googleapis.com 'unsafe-inline'; script-src 'nonce-{{CSP_NONCE}}'; connect-src http://127.0.0.1:* http://localhost:*; font-src https://fonts.gstatic.com;">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{WEBVIEW_CSS_URI}}">
+    <title>LocoEngine</title>
+</head>
+<body>
+    <!-- ═══════════ HEADER ═══════════ -->
+    <header id="loco-header">
+        <div class="header-brand">
+            <span class="brand-icon">⚡</span>
+            <h1 class="brand-title">LocoEngine</h1>
+            <span id="status-badge" class="status-badge status-idle" title="Engine Status">
+                <span class="status-dot"></span>
+                <span class="status-label">Idle</span>
+            </span>
+        </div>
+        <div class="header-workspace" id="workspace-bar">
+            <span class="ws-icon">📂</span>
+            <span class="ws-path" id="workspace-path" title="">No workspace</span>
+        </div>
+    </header>
+
+    <!-- ═══════════ CONTEXT BAR ═══════════ -->
+    <div id="context-bar" class="context-bar">
+        <div class="ctx-file" id="ctx-active-file">
+            <span class="ctx-icon">📄</span>
+            <span class="ctx-label" id="ctx-file-label">No file active</span>
+        </div>
+        <div class="ctx-actions">
+            <button id="btn-attach-file" class="ctx-btn" title="Add active file as context">+ File</button>
+            <button id="btn-attach-selection" class="ctx-btn" title="Add selected text as context">+ Selection</button>
+        </div>
+    </div>
+
+    <!-- ═══════════ RAG SOURCES PANEL ═══════════ -->
+    <div id="rag-sources-panel" class="rag-sources-panel">
+        <div class="rag-sources-header" onclick="document.getElementById('rag-sources-panel').classList.toggle('expanded')">
+            <span class="rag-title">📚 Custom RAG Data Sources</span>
+            <span class="rag-toggle-arrow">▼</span>
+        </div>
+        <div class="rag-sources-body">
+            <div class="rag-row">
+                <input type="file" id="rag-file-input" style="display: none;" />
+                <button id="btn-upload-file" class="rag-btn">📤 Index File</button>
+                <span id="rag-file-name" class="rag-file-name">No file selected</span>
+            </div>
+            <div class="rag-row">
+                <input type="text" id="rag-url-input" class="rag-url-input" placeholder="Index URL (e.g. https://api-docs.com)..." />
+                <button id="btn-scrape-url" class="rag-btn highlight">🌐 Index URL</button>
+            </div>
+            <div id="rag-status-msg" class="rag-status-msg"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════ MODE SELECTOR ═══════════ -->
+    <div id="mode-bar" class="mode-bar">
+        <button class="mode-btn active" data-mode="code">Code</button>
+        <button class="mode-btn" data-mode="plan">Plan</button>
+        <button class="mode-btn" data-mode="agent">Agent</button>
+        <div class="mode-indicator" id="mode-indicator"></div>
+    </div>
+
+    <!-- ═══════════ CHAT MESSAGES ═══════════ -->
+    <main id="chat-container" class="chat-container">
+        <div id="welcome-screen" class="welcome-screen">
+            <div class="welcome-glow"></div>
+            <h2>Welcome to LocoEngine</h2>
+            <p>Your private, local AI coding assistant — powered by Ollama.</p>
+            <div class="welcome-capabilities">
+                <div class="cap-item"><span class="cap-icon">🧠</span><span>Understands your full codebase via RAG</span></div>
+                <div class="cap-item"><span class="cap-icon">🔧</span><span>Reads, writes, and refactors files autonomously</span></div>
+                <div class="cap-item"><span class="cap-icon">🛡️</span><span>All commands require your approval before executing</span></div>
+                <div class="cap-item"><span class="cap-icon">🔒</span><span>100% offline — your code never leaves your machine</span></div>
+            </div>
+        </div>
+        <div id="messages" class="messages"></div>
+    </main>
+
+    <!-- ═══════════ HITL APPROVAL BANNER ═══════════ -->
+    <div id="approval-banner" class="approval-banner hidden">
+        <div class="approval-header">
+            <span class="approval-icon">⚠️</span>
+            <strong>Approval Required</strong>
+        </div>
+        <div class="approval-body">
+            <p id="approval-description">The agent wants to execute:</p>
+            <pre id="approval-command"></pre>
+        </div>
+        <div class="approval-actions">
+            <button id="btn-approve" class="approval-btn approve">✅ Approve</button>
+            <button id="btn-reject" class="approval-btn reject">❌ Reject</button>
+        </div>
+    </div>
+
+    <!-- ═══════════ INPUT BAR ═══════════ -->
+    <footer id="input-bar" class="input-bar">
+        <div class="input-context-chips" id="input-chips"></div>
+        <div class="input-row">
+            <textarea id="prompt-input" class="prompt-input" placeholder="Ask LocoEngine anything..." rows="1"></textarea>
+            <button id="btn-send" class="send-btn" title="Send">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+            <button id="btn-stop" class="stop-btn hidden" title="Stop generation">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
+            </button>
+        </div>
+        <div class="input-footer">
+            <div class="footer-left">
+                <button id="btn-settings" class="footer-btn" title="Settings">⚙️</button>
+                <button id="btn-history" class="footer-btn" title="Chat History">⏳</button>
+                <button id="btn-clear" class="footer-btn" title="Clear chat">🗑️</button>
+            </div>
+            <div class="footer-right">
+                <span id="footer-model" class="footer-model-label">model: auto</span>
+                <select id="footer-model-select" class="footer-model-select" title="Active Model">
+                    <option value="auto">Auto Select</option>
+                </select>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ═══════════ SETTINGS OVERLAY ═══════════ -->
+    <div id="settings-overlay" class="settings-overlay hidden">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <h3>LocoEngine Settings</h3>
+                <button id="btn-close-settings" class="settings-close">✕</button>
+            </div>
+            <div class="settings-body">
+                <label class="setting-label">Server URL</label>
+                <input id="setting-server-url" class="setting-input" type="text" value="http://127.0.0.1:8000">
+                <label class="setting-label">Coding Model</label>
+                <select id="setting-coding-model" class="setting-input"><option>Loading...</option></select>
+                <label class="setting-label">Reasoning Model</label>
+                <select id="setting-reasoning-model" class="setting-input"><option>Loading...</option></select>
+                <div class="setting-toggle-row">
+                    <label>Enable RAG</label>
+                    <label class="toggle"><input type="checkbox" id="setting-rag" checked><span class="toggle-slider"></span></label>
+                </div>
+                <div class="setting-toggle-row">
+                    <label>Enable Cascade</label>
+                    <label class="toggle"><input type="checkbox" id="setting-cascade" checked><span class="toggle-slider"></span></label>
+                </div>
+
+                <hr class="setting-divider">
+                
+                <h4 class="settings-subsection-title">Native llama.cpp Runner Setup</h4>
+                <div id="runner-setup-section">
+                    <p class="section-desc">Runs LLMs offline. Download and run weights locally without Ollama.</p>
+                    <div class="runner-install-row">
+                        <span id="runner-bin-status">llama.cpp: checking...</span>
+                        <button id="btn-install-runner" class="save-settings-btn small-btn">Install</button>
+                    </div>
+                    
+                    <div class="model-download-section">
+                        <label class="setting-label">Download Models (Hardware Gated)</label>
+                        <div class="download-row">
+                            <select id="download-model-select" class="setting-input">
+                                <option value="qwen2.5-coder:1.5b">Qwen 2.5 Coder 1.5B (Req: 4GB RAM)</option>
+                                <option value="deepseek-r1:1.5b">DeepSeek R1 1.5B (Req: 4GB RAM)</option>
+                                <option value="llama3.2:3b">Llama 3.2 3B Instruct (Req: 8GB RAM)</option>
+                                <option value="nemotron-mini:4b">NVIDIA Nemotron Mini 4B (Req: 8GB RAM)</option>
+                            </select>
+                            <button id="btn-download-model" class="save-settings-btn small-btn">Download</button>
+                        </div>
+                        <div id="download-progress-container" class="download-progress-container hidden">
+                            <div class="progress-bar-track">
+                                <div id="download-progress-bar" class="progress-bar-fill"></div>
+                            </div>
+                            <span id="download-progress-status">Downloading: 0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="model-download-section">
+                        <label class="setting-label">Manage Local GGUF Servers</label>
+                        <div class="download-row">
+                            <select id="start-model-select" class="setting-input">
+                                <option>No downloaded models</option>
+                            </select>
+                            <button id="btn-start-runner" class="save-settings-btn small-btn">Start</button>
+                            <button id="btn-stop-runner" class="save-settings-btn small-btn stop-theme hidden">Stop</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-footer">
+                <button id="btn-sync-skills" class="save-settings-btn secondary-btn" style="margin-right: auto;">🔄 Sync Skills</button>
+                <button id="btn-save-settings" class="save-settings-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ HISTORY OVERLAY ═══════════ -->
+    <div id="history-overlay" class="settings-overlay hidden">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <h3>Recent Activity & Chats</h3>
+                <button id="btn-close-history" class="settings-close">✕</button>
+            </div>
+            <div class="settings-body" id="history-list-container">
+                <div class="no-history-msg">No recent activity.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ NO MODEL WARNING OVERLAY ═══════════ -->
+    <div id="no-model-overlay" class="no-model-overlay hidden">
+        <div class="warning-card">
+            <span class="warning-icon">⚠️</span>
+            <h3>No Local Model Active</h3>
+            <p>LocoEngine requires an active local LLM before you can query. Please download a model or verify server connectivity.</p>
+            <button id="btn-warning-open-settings" class="warning-btn">⚙️ Open Downloader / Settings</button>
+        </div>
+    </div>
+
+    <script nonce="{{CSP_NONCE}}" src="{{WEBVIEW_JS_URI}}"></script>
+</body>
+</html>
